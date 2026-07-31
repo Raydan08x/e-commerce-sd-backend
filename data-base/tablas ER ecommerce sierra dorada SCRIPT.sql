@@ -18,7 +18,8 @@ CREATE TABLE usuarios (
     telefono VARCHAR(20),
     contrasena VARCHAR(255) NOT NULL,
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-    activo BOOLEAN DEFAULT TRUE
+    activo BOOLEAN DEFAULT TRUE,
+    rol ENUM('CLIENTE', 'ADMIN') NOT NULL DEFAULT 'CLIENTE'
 );
  
 CREATE TABLE categorias (
