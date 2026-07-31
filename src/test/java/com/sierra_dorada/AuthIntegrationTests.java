@@ -9,11 +9,17 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthIntegrationTests {
     @Autowired MockMvc mvc;
+
+    @Test
+    void ejecutaConJava21() {
+        assertEquals(21, Runtime.version().feature());
+    }
 
     @Test
     void registraUsuarioPermiteLoginYExponeCatalogoPublico() throws Exception {

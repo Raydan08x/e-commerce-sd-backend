@@ -8,8 +8,44 @@ group = 'com.sierra_dorada'
 version = '0.0.1-SNAPSHOT'
 description = 'Backend e-commerce Sierra Dorada'
 
+// Evita bloqueos de archivos .class cuando el repositorio vive dentro de OneDrive.
+def localBuildRoot = new File(System.getProperty('java.io.tmpdir'), 'sierra-dorada-gradle')
+layout.buildDirectory = new File(localBuildRoot, project.name + '-' + Integer.toHexString(projectDir.absolutePath.hashCode()))
+
 java {
 	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = 21
+}
+
+tasks.withType(Test).configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks.named('bootRun') {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = 21
+}
+
+tasks.withType(Test).configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks.named('bootRun') {
+	javaLauncher = javaToolchains.launcherFor {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
 }

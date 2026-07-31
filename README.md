@@ -6,20 +6,40 @@ Frontend de referencia: https://github.com/Raydan08x/e-commerce-sierra-dorada
 
 ## Requisitos
 
-- Java 21 o superior.
+- JDK 21 instalado.
 - MySQL 8.
 - No es necesario instalar Gradle; el repositorio incluye Gradle Wrapper.
 
 ## Base de datos
 
-1. Ejecute `data-base/tablas ER ecommerce sierra dorada SCRIPT.sql` en MySQL.
-2. Configure las variables de entorno, o use los valores locales predeterminados:
+### Configuración desde IntelliJ IDEA
+
+La configuración se realiza con el archivo [setup-ecommerce-sd.sql](data-base/setup-ecommerce-sd.sql). Es SQL estándar para MySQL 8 y se ejecuta directamente desde la herramienta **Database** de IntelliJ; ya no se necesita un script de PowerShell.
+
+1. Cree o abra en IntelliJ una conexión administrativa local a MySQL con el usuario `root` y la contraseña de root de esa computadora.
+2. Abra `data-base/setup-ecommerce-sd.sql`, seleccione esa conexión administrativa y ejecute el archivo completo. El script crea la base, el usuario del proyecto, sus permisos y las siete tablas. Puede volver a ejecutarse sin borrar datos.
+3. Configure la conexión de uso normal del proyecto con estos valores:
+
+| Campo de IntelliJ | Valor |
+| --- | --- |
+| Name | `ecommerce-sd` |
+| Host | `localhost` |
+| Port | `3306` |
+| User | `ecommerce_sd` |
+| Password | `Sierra2026*` |
+| Database | `e-commerce-sierra-dorada` |
+
+4. Pulse **Test Connection**. En la pestaña **Schemas**, seleccione `e-commerce-sierra-dorada` y sincronice la conexión para ver las tablas.
+
+La contraseña de `root` no puede fijarse desde el repositorio porque pertenece a la instalación local de MySQL. Solo se usa una vez para ejecutar el script administrativo. El backend usa siempre la cuenta `ecommerce_sd`; el nombre visual de la conexión en IntelliJ no afecta a la aplicación.
+
+Configure las variables de entorno, o use los valores locales predeterminados:
 
 | Variable | Valor predeterminado |
 | --- | --- |
 | `DB_URL` | `jdbc:mysql://localhost:3306/e-commerce-sierra-dorada` |
-| `DB_USERNAME` | `root` |
-| `DB_PASSWORD` | vacío |
+| `DB_USERNAME` | `ecommerce_sd` |
+| `DB_PASSWORD` | `Sierra2026*` |
 | `JWT_SECRET` | clave local de desarrollo; cámbiela en producción |
 | `JWT_EXPIRATION_MS` | `86400000` (24 horas) |
 | `CORS_ALLOWED_ORIGINS` | localhost y GitHub Pages del frontend |
@@ -34,7 +54,7 @@ En Windows:
 .\gradlew.bat bootRun
 ```
 
-La API queda disponible en `http://localhost:8080`.
+La API queda disponible en `http://localhost:8081`. En este equipo el puerto `8080` ya está ocupado por Docker/Traefik; en despliegue se puede sobrescribir con la variable `PORT`.
 
 Para ejecutar las pruebas:
 
