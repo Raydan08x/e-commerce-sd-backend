@@ -1,18 +1,31 @@
 package com.sierra_dorada.controller;
-import com.sierra_dorada.dto.*;
+
+import com.sierra_dorada.dto.AuthResponse;
+import com.sierra_dorada.dto.LoginRequest;
+import com.sierra_dorada.dto.RegistroRequest;
 import com.sierra_dorada.service.AuthService;
 import jakarta.validation.Valid;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class AuthController {
-    private final AuthService service;
-    public AuthController(AuthService service) { this.service = service; }
+    private final AuthService servicio;
+
+    public AuthController(AuthService servicio) {
+        this.servicio = servicio;
+    }
+
     @PostMapping({"/api/auth/login", "/login"})
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) { return service.login(request); }
+    public AuthResponse login(@Valid @RequestBody LoginRequest solicitud) {
+        return servicio.login(solicitud);
+    }
+
     @PostMapping({"/api/auth/registro", "/registro"})
-    public ResponseEntity<AuthResponse> registro(@Valid @RequestBody RegistroRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.registrar(request));
+    public ResponseEntity<AuthResponse> registro(@Valid @RequestBody RegistroRequest solicitud) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(servicio.registrar(solicitud));
     }
 }

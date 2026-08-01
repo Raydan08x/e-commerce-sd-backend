@@ -1,3 +1,12 @@
 package com.sierra_dorada.dto;
+
 import jakarta.validation.constraints.NotBlank;
-public record LoginRequest(@NotBlank String usuario, @NotBlank String password) {}
+
+public record LoginRequest(
+    @NotBlank(message = "El usuario es obligatorio")
+    String usuario,
+
+    @NotBlank(message = "La contraseña es obligatoria")
+    String password
+) {
+}

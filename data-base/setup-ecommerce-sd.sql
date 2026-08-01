@@ -118,8 +118,6 @@ CREATE TABLE IF NOT EXISTS pagos (
         FOREIGN KEY (metodo_pago_id) REFERENCES metodos_pago(id_metodo_pago)
 );
 
-FLUSH PRIVILEGES;
-
 SELECT CURRENT_USER() AS ejecutado_por,
        DATABASE() AS base_activa;
 

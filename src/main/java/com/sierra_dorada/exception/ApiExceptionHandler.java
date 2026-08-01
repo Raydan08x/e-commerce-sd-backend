@@ -1,43 +1,58 @@
 package com.sierra_dorada.exception;
 
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
     @ExceptionHandler(RecursoNoEncontradoException.class)
-    ResponseEntity<Map<String, Object>> noEncontrado(RecursoNoEncontradoException ex) {
-        return respuesta(HttpStatus.NOT_FOUND, ex.getMessage());
+    ResponseEntity<Map<String, Object>> noEncontrado(RecursoNoEncontradoException excepcion) {
+        return respuesta(HttpStatus.NOT_FOUND, excepcion.getMessage());
     }
+
     @ExceptionHandler(ConflictoException.class)
-    ResponseEntity<Map<String, Object>> conflicto(ConflictoException ex) {
-        return respuesta(HttpStatus.CONFLICT, ex.getMessage());
+    ResponseEntity<Map<String, Object>> conflicto(ConflictoException excepcion) {
+        return respuesta(HttpStatus.CONFLICT, excepcion.getMessage());
     }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<Map<String, Object>> validacion(MethodArgumentNotValidException ex) {
+    ResponseEntity<Map<String, Object>> validacion(MethodArgumentNotValidException excepcion) {
         Map<String, String> errores = new LinkedHashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(e -> errores.put(e.getField(), e.getDefaultMessage()));
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", 400);
-        body.put("message", "Datos inválidos");
-        body.put("errors", errores);
-        return ResponseEntity.badRequest().body(body);
+        excepcion.getBindingResult().getFieldErrors()
+            .forEach(error -> errores.put(error.getField(), error.getDefaultMessage()));
+
+        Map<String, Object> cuerpo = new LinkedHashMap<>();
+        cuerpo.put("timestamp", LocalDateTime.now());
+        cuerpo.put("status", HttpStatus.BAD_REQUEST.value());
+        cuerpo.put("message", "Datos inválidos");
+        cuerpo.put("errors", errores);
+        return ResponseEntity.badRequest().body(cuerpo);
     }
+
     @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<Map<String, Object>> solicitudInvalida(IllegalArgumentException ex) {
-        return respuesta(HttpStatus.BAD_REQUEST, ex.getMessage());
+    ResponseEntity<Map<String, Object>> solicitudInvalida(IllegalArgumentException excepcion) {
+        return respuesta(HttpStatus.BAD_REQUEST, excepcion.getMessage());
     }
+
     @ExceptionHandler(BadCredentialsException.class)
-    ResponseEntity<Map<String, Object>> credenciales(BadCredentialsException ex) {
-        return respuesta(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    ResponseEntity<Map<String, Object>> credenciales(BadCredentialsException excepcion) {
+        return respuesta(HttpStatus.UNAUTHORIZED, excepcion.getMessage());
     }
-    private ResponseEntity<Map<String, Object>> respuesta(HttpStatus status, String message) {
-        return ResponseEntity.status(status).body(Map.of(
-            "timestamp", LocalDateTime.now(), "status", status.value(), "message", message));
+
+    private ResponseEntity<Map<String, Object>> respuesta(HttpStatus estado, String mensaje) {
+        return ResponseEntity.status(estado).body(Map.of(
+            "timestamp", LocalDateTime.now(),
+            "status", estado.value(),
+            "message", mensaje
+        ));
     }
 }

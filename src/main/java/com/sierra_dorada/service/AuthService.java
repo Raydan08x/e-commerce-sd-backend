@@ -1,48 +1,85 @@
 package com.sierra_dorada.service;
 
-import com.sierra_dorada.dto.*;
+import com.sierra_dorada.dto.AuthResponse;
+import com.sierra_dorada.dto.LoginRequest;
+import com.sierra_dorada.dto.RegistroRequest;
 import com.sierra_dorada.model.Usuario;
 import com.sierra_dorada.repository.UsuarioRepository;
 import com.sierra_dorada.security.JwtService;
-import org.springframework.security.authentication.*;
+import java.time.LocalDate;
+import java.util.Locale;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
 
+/** Gestiona el registro, el inicio de sesión y la creación de tokens. */
 @Service
 public class AuthService {
-    private final AuthenticationManager authenticationManager;
+
+    private static final String CREDENCIALES_INVALIDAS = "Usuario o contraseña incorrectos";
+
+    private final AuthenticationManager gestorAutenticacion;
     private final UsuarioRepository usuarios;
-    private final UsuarioService usuarioService;
-    private final JwtService jwtService;
-    public AuthService(AuthenticationManager authenticationManager, UsuarioRepository usuarios,
-                       UsuarioService usuarioService, JwtService jwtService) {
-        this.authenticationManager = authenticationManager; this.usuarios = usuarios;
-        this.usuarioService = usuarioService; this.jwtService = jwtService;
+    private final UsuarioService servicioUsuarios;
+    private final JwtService servicioJwt;
+
+    public AuthService(
+            AuthenticationManager gestorAutenticacion,
+            UsuarioRepository usuarios,
+            UsuarioService servicioUsuarios,
+            JwtService servicioJwt) {
+        this.gestorAutenticacion = gestorAutenticacion;
+        this.usuarios = usuarios;
+        this.servicioUsuarios = servicioUsuarios;
+        this.servicioJwt = servicioJwt;
     }
-    public AuthResponse login(LoginRequest request) {
+
+    public AuthResponse login(LoginRequest solicitud) {
+        String correo = normalizarCorreo(solicitud.usuario());
+
         try {
-            authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.usuario().toLowerCase(), request.password()));
-        } catch (AuthenticationException ex) {
-            throw new BadCredentialsException("Usuario o contraseña incorrectos");
+            gestorAutenticacion.authenticate(
+                    new UsernamePasswordAuthenticationToken(correo, solicitud.password()));
+        } catch (AuthenticationException excepcion) {
+            throw new BadCredentialsException(CREDENCIALES_INVALIDAS, excepcion);
         }
-        Usuario usuario = usuarios.findByEmailIgnoreCase(request.usuario())
-            .orElseThrow(() -> new BadCredentialsException("Usuario o contraseña incorrectos"));
-        return respuesta(usuario);
+
+        Usuario usuario = usuarios.findByEmailIgnoreCase(correo)
+                .orElseThrow(() -> new BadCredentialsException(CREDENCIALES_INVALIDAS));
+        return crearRespuesta(usuario);
     }
-    public AuthResponse registrar(RegistroRequest request) {
-        if (request.fechaNacimiento().isAfter(LocalDate.now().minusYears(18)))
+
+    public AuthResponse registrar(RegistroRequest solicitud) {
+        if (solicitud.fechaNacimiento().isAfter(LocalDate.now().minusYears(18))) {
             throw new IllegalArgumentException("Debes ser mayor de 18 años para crear una cuenta");
+        }
+
         Usuario usuario = new Usuario();
-        usuario.setNombres(request.nombre()); usuario.setApellidos(request.apellidos());
-        usuario.setFechaNacimiento(request.fechaNacimiento()); usuario.setGenero(request.genero());
-        usuario.setDireccion(request.direccion()); usuario.setTelefono(request.telefono());
-        usuario.setEmail(request.email().toLowerCase()); usuario.setContrasena(request.password());
-        return respuesta(usuarioService.crear(usuario));
+        usuario.setNombres(solicitud.nombre());
+        usuario.setApellidos(solicitud.apellidos());
+        usuario.setFechaNacimiento(solicitud.fechaNacimiento());
+        usuario.setGenero(solicitud.genero());
+        usuario.setDireccion(solicitud.direccion());
+        usuario.setTelefono(solicitud.telefono());
+        usuario.setEmail(normalizarCorreo(solicitud.email()));
+        usuario.setContrasena(solicitud.password());
+
+        return crearRespuesta(servicioUsuarios.crear(usuario));
     }
-    private AuthResponse respuesta(Usuario usuario) {
-        return new AuthResponse(jwtService.generar(usuario), "Bearer", usuario.getId(), usuario.getEmail(),
-            usuario.getNombres() + " " + usuario.getApellidos(), usuario.getRol().name().toLowerCase());
+
+    private AuthResponse crearRespuesta(Usuario usuario) {
+        return new AuthResponse(
+                servicioJwt.generar(usuario),
+                "Bearer",
+                usuario.getId(),
+                usuario.getEmail(),
+                usuario.getNombres() + " " + usuario.getApellidos(),
+                usuario.getRol().name().toLowerCase(Locale.ROOT));
+    }
+
+    private String normalizarCorreo(String correo) {
+        return correo.trim().toLowerCase(Locale.ROOT);
     }
 }

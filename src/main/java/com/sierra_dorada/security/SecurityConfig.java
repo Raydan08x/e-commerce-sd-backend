@@ -1,60 +1,107 @@
 package com.sierra_dorada.security;
 
 import com.sierra_dorada.repository.UsuarioRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.*;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.*;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
-@EnableMethodSecurity
 public class SecurityConfig {
-    @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    private static final String ROL_ADMIN = "ADMIN";
+    private static final String[] RUTAS_CATALOGO = {
+        "/api/productos/**", "/productos/**",
+        "/api/categorias/**", "/categorias/**",
+        "/api/metodos-pago/**"
+    };
+
     @Bean
-    UserDetailsService userDetailsService(UsuarioRepository usuarios) {
+    PasswordEncoder codificadorContrasenas() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    UserDetailsService servicioDetallesUsuario(UsuarioRepository usuarios) {
         return email -> usuarios.findByEmailIgnoreCase(email)
-            .filter(u -> Boolean.TRUE.equals(u.getActivo()))
-            .map(u -> User.withUsername(u.getEmail()).password(u.getContrasena())
-                .roles(u.getRol().name()).build())
+            .filter(usuario -> Boolean.TRUE.equals(usuario.getActivo()))
+            .map(usuario -> User.withUsername(usuario.getEmail())
+                .password(usuario.getContrasena())
+                .roles(usuario.getRol().name())
+                .build())
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
     }
-    @Bean AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
-        return http.csrf(csrf -> csrf.disable()).cors(cors -> {})
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
+    AuthenticationManager administradorAutenticacion(AuthenticationConfiguration configuracion) throws Exception {
+        return configuracion.getAuthenticationManager();
+    }
+
+    @Bean
+    SecurityFilterChain cadenaFiltrosSeguridad(HttpSecurity http,
+                                                JwtAuthenticationFilter filtroJwt) throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> {})
+            .sessionManagement(sesiones -> sesiones.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(excepciones -> excepciones
+                .authenticationEntryPoint((solicitud, respuesta, excepcion) ->
+                    escribirError(respuesta, HttpServletResponse.SC_UNAUTHORIZED,
+                        "Se requiere autenticación"))
+                .accessDeniedHandler((solicitud, respuesta, excepcion) ->
+                    escribirError(respuesta, HttpServletResponse.SC_FORBIDDEN,
+                        "No tienes permisos para realizar esta acción")))
+            .authorizeHttpRequests(autorizacion -> autorizacion
                 .requestMatchers("/api/auth/**", "/login", "/registro", "/error").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/productos/**", "/productos/**", "/api/categorias/**", "/categorias/**", "/api/metodos-pago/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/productos/**", "/productos/**", "/api/categorias/**", "/categorias/**", "/api/metodos-pago/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/productos/**", "/productos/**", "/api/categorias/**", "/categorias/**", "/api/metodos-pago/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/productos/**", "/productos/**", "/api/categorias/**", "/categorias/**", "/api/metodos-pago/**").hasRole("ADMIN")
-                .requestMatchers("/api/usuarios/**", "/usuarios/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, RUTAS_CATALOGO).permitAll()
+                .requestMatchers(RUTAS_CATALOGO).hasRole(ROL_ADMIN)
+                .requestMatchers("/api/usuarios/**", "/usuarios/**").hasRole(ROL_ADMIN)
                 .anyRequest().authenticated())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).build();
+            .addFilterBefore(filtroJwt, UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
+
     @Bean
-    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.allowed-origins}") String origins) {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.stream(origins.split(",")).map(String::trim).toList());
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        config.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
+    CorsConfigurationSource fuenteConfiguracionCors(
+        @Value("${app.cors.allowed-origins}") String origenesPermitidos) {
+        CorsConfiguration configuracion = new CorsConfiguration();
+        configuracion.setAllowedOrigins(Arrays.stream(origenesPermitidos.split(","))
+            .map(String::trim)
+            .toList());
+        configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuracion.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuracion.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource fuente = new UrlBasedCorsConfigurationSource();
+        fuente.registerCorsConfiguration("/**", configuracion);
+        return fuente;
+    }
+
+    private static void escribirError(HttpServletResponse respuesta, int estado, String mensaje)
+        throws IOException {
+        respuesta.setStatus(estado);
+        respuesta.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        respuesta.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        respuesta.getWriter().write("{\"estado\":" + estado + ",\"mensaje\":\"" + mensaje + "\"}");
     }
 }

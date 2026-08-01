@@ -44,7 +44,9 @@ Configure las variables de entorno, o use los valores locales predeterminados:
 | `JWT_EXPIRATION_MS` | `86400000` (24 horas) |
 | `CORS_ALLOWED_ORIGINS` | localhost y GitHub Pages del frontend |
 
-La configuración completa está en `src/main/resources/application.properties`. Hibernate usa `ddl-auto=update` de forma predeterminada para sincronizar la columna de rol agregada al modelo.
+Los valores predeterminados de `DB_PASSWORD` y `JWT_SECRET` son exclusivamente para desarrollo local. En cualquier despliegue, defina valores propios mediante variables de entorno y no publique secretos reales en el repositorio.
+
+La configuración completa está en `src/main/resources/application.properties`.
 
 ## Ejecución
 
@@ -54,7 +56,7 @@ En Windows:
 .\gradlew.bat bootRun
 ```
 
-La API queda disponible en `http://localhost:8081`. En este equipo el puerto `8080` ya está ocupado por Docker/Traefik; en despliegue se puede sobrescribir con la variable `PORT`.
+La API queda disponible de forma predeterminada en `http://localhost:8081`. Puede cambiar el puerto mediante la variable de entorno `PORT`.
 
 Para ejecutar las pruebas:
 
