@@ -94,12 +94,25 @@ jobs:
 
           echo "Construyendo imagen: $IMAGE_URI"
 
-          docker build \
-            --platform linux/amd64 \
-            --pull \
-            -t "$IMAGE_URI" \
-            -t "$LATEST_URI" \
-            .
+          for intento in 1 2 3; do
+            if docker build \
+              --platform linux/amd64 \
+              --pull \
+              -t "$IMAGE_URI" \
+              -t "$LATEST_URI" \
+              .; then
+              break
+            fi
+
+            if [ "$intento" -eq 3 ]; then
+              echo "No fue posible construir la imagen después de 3 intentos"
+              exit 1
+            fi
+
+            espera=$((intento * 15))
+            echo "La construcción falló. Reintentando en ${espera}s..."
+            sleep "$espera"
+          done
 
           docker push "$IMAGE_URI"
           docker push "$LATEST_URI"
@@ -131,6 +144,18 @@ jobs:
               {
                 "name": "DB_PASSWORD",
                 "value": "${{ secrets.DB_PASSWORD }}"
+              },
+              {
+                "name": "JWT_SECRET",
+                "value": "${{ secrets.JWT_SECRET }}"
+              },
+              {
+                "name": "CORS_ALLOWED_ORIGINS",
+                "value": "${{ secrets.CORS_ALLOWED_ORIGINS }}"
+              },
+              {
+                "name": "CONTAINER_PORT",
+                "value": "${{ secrets.CONTAINER_PORT }}"
               }
             ]
 

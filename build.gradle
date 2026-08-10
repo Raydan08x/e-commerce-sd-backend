@@ -8,9 +8,13 @@ group = 'com.sierra_dorada'
 version = '0.0.1-SNAPSHOT'
 description = 'Backend e-commerce Sierra Dorada'
 
-// Evita bloqueos de archivos .class cuando el repositorio vive dentro de OneDrive.
-def localBuildRoot = new File(System.getProperty('java.io.tmpdir'), 'sierra-dorada-gradle')
-layout.buildDirectory = new File(localBuildRoot, project.name + '-' + Integer.toHexString(projectDir.absolutePath.hashCode()))
+// Evita bloqueos de archivos .class cuando el repositorio vive dentro de OneDrive
+// en Windows. En Linux (incluido el build de Docker) se conserva build/ para que
+// las herramientas encuentren el artefacto en la ruta convencional build/libs.
+if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+	def localBuildRoot = new File(System.getProperty('java.io.tmpdir'), 'sierra-dorada-gradle')
+	layout.buildDirectory = new File(localBuildRoot, project.name + '-' + Integer.toHexString(projectDir.absolutePath.hashCode()))
+}
 
 java {
 	toolchain {
